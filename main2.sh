@@ -16,8 +16,9 @@ users_file="/usr/local/bash_dbms/users_file"
  		local insert_statment=$(echo $* | awk 'BEGIN {FS = " "} { for ( i = 1;i <= NF;i++ ) { if (i = NF) print $i }  } ')
 		local temp_headers=$(echo $insert_statment | awk 'BEGIN {FS = "("} {print $2}')
 		local headers=$(echo $temp_headers | awk 'BEGIN {FS = ")"} {print $1}')
- 		local data_type=$(echo $headers | awk 'BEGIN{ FS = "," } {print $0}' |awk 'BEGIN{ FS = "*" } {for(i=1;i<=NF;i++) if(i=2) print $i}' )
- 		echo $data_type
+ 		local temp_data_type=$(echo "$headers" | awk 'BEGIN{ FS = ":" } {for 	(i = 2; i<= NF  ; i++) { if (!(i%2)) print $i }}')
+ 		#local data_type=$(echo $temp_data_type|awk 'BEGIN{ FS = ":" } {print $0}')
+ 		echo $temp_data_type
 
 
 
