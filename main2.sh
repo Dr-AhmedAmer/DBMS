@@ -11,7 +11,7 @@ users_file="/usr/local/bash_dbms/users_file"
 # }
 
 
- function check_headers_datatype  {
+ function check_headers_datatype  { #checks datatypes during table first creation
  		declare -a valid=('int' 'char');
  		local data_types=''
  		local i
@@ -40,7 +40,7 @@ users_file="/usr/local/bash_dbms/users_file"
  			done
 
  		done
- 		echo $flag
+ 			echo $flag
 
 }
 
@@ -48,7 +48,7 @@ users_file="/usr/local/bash_dbms/users_file"
 
 
 
-function table_headers_insert { #inserting table headers
+function get_headers { #concat table headers
 
 	local insert_statment=$(echo $* | awk 'BEGIN {FS = " "} { for ( i = 1;i <= NF;i++ ) { if (i = NF) print $i }  } ')
 	local temp_headers=$(echo $insert_statment | awk 'BEGIN {FS = "("} {print $2}')
@@ -239,9 +239,9 @@ function table_creator {     #checks if user is assigned to database and creates
 
 				check_two=$(check_headers_datatype $*)
 
-				if [[ $check_two == "valid" ]];then	
-					create=$(table_headers_insert $* > $3)
-					sleep .01
+				if [[ $check_two == "valid" ]];then
+					$(touch $3)	
+					create=$(get_headers $* concat		sleep .01
 					echo -e "\033[33;34m table $3 created"
 					echo -en "\e[0m"
 				else
