@@ -12,13 +12,31 @@ users_file="/usr/local/bash_dbms/users_file"
 
 
  function check_headers_datatype  {
-
+ 		declare -a valid=('int' 'char');
+ 		local i
+ 		local k
  		local insert_statment=$(echo $* | awk 'BEGIN {FS = " "} { for ( i = 1;i <= NF;i++ ) { if (i = NF) print $i }  } ')
 		local temp_headers=$(echo $insert_statment | awk 'BEGIN {FS = "("} {print $2}')
 		local headers=$(echo $temp_headers | awk 'BEGIN {FS = ")"} {print $1}')
- 		local temp_data_type=$(echo "$headers" | awk 'BEGIN{ FS = ":" } {for 	(i = 2; i<= NF  ; i++) { if (!(i%2)) print $i }}')
- 		#local data_type=$(echo $temp_data_type|awk 'BEGIN{ FS = ":" } {print $0}')
- 		echo $temp_data_type
+ 		local temp_data_type=$(echo "$headers" | awk 'BEGIN{ FS = "," } { print $0 }')
+ 		local flag=valid
+ 		for i in "${temp_data_type[@]}"
+ 		do
+
+ 			local temp=$(echo $i | awk 'BEGIN{FS = ":"}{print $2} ')
+ 			for k in "${valid[@]}"
+ 			do
+ 				if [[ "$k" != "$temp" ]];then
+ 					flag=non-valid
+ 					break
+ 				fi
+
+ 			done
+ 			if [[ "$flag" == "non-valid" ]];then
+ 				break
+ 			fi
+ 		done
+ 			echo $flag
 
 
 
@@ -205,6 +223,7 @@ function table_creator {     #checks if user is assigned to database and creates
 
 	local code1=$(check_place)
 	local check
+	local check_two
 	if [[ $code1 == "$main_dir" ]]; then
 
 		echo 'You must select database first'
@@ -213,13 +232,19 @@ function table_creator {     #checks if user is assigned to database and creates
 		local table="$(pwd)"/"$3" 
 
 		if [[ check -eq 1 ]]; then
+
 			if [ ! -f  $table ]; then
-				check=$(check_headers_datatype $*)
-				echo $check
-				create=$(table_headers_insert $* > $3)
-				sleep .01
-				echo -e "\033[33;34m table $3 created"
-				echo -en "\e[0m"
+
+				check_two=$(check_headers_datatype $*)
+
+				if [[ $check_two == "valid" ]];then	
+					create=$(table_headers_insert $* > $3)
+					sleep .01
+					echo -e "\033[33;34m table $3 created"
+					echo -en "\e[0m"
+				else
+					echo "Non-valid data_types"
+				fi
 			else
 				echo -e "\033[33;31m table already exits"
 				echo -en "\e[0m" 
