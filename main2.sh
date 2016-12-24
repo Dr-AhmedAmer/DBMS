@@ -13,32 +13,34 @@ users_file="/usr/local/bash_dbms/users_file"
 
  function check_headers_datatype  {
  		declare -a valid=('int' 'char');
+ 		local data_types=''
  		local i
  		local k
+ 		local index
+ 		index=0
  		local insert_statment=$(echo $* | awk 'BEGIN {FS = " "} { for ( i = 1;i <= NF;i++ ) { if (i = NF) print $i }  } ')
 		local temp_headers=$(echo $insert_statment | awk 'BEGIN {FS = "("} {print $2}')
 		local headers=$(echo $temp_headers | awk 'BEGIN {FS = ")"} {print $1}')
- 		local temp_data_type=$(echo "$headers" | awk 'BEGIN{ FS = "," } { print $0 }')
- 		local flag=valid
- 		for i in "${temp_data_type[@]}"
+ 		local temp_data_type=$(echo "$headers" |awk -F "," 'BEGIN{ OFS=":"; } {$1=$1; print $0 }')
+ 		data_types=$(echo $temp_data_type | awk -F ":" '{for(i=1;i<=NF;i++) if (!(i%2)) print$i }')
+ 		read -a array <<<$data_types
+		local flag=non-valid
+
+ 		for i in "${array[@]}"
  		do
 
- 			local temp=$(echo $i | awk 'BEGIN{FS = ":"}{print $2} ')
+ 			flag=non-valid
  			for k in "${valid[@]}"
  			do
- 				if [[ "$k" != "$temp" ]];then
- 					flag=non-valid
+ 				if [[ "$k" == "$i"  ]];then
+ 					flag=valid
  					break
  				fi
 
  			done
- 			if [[ "$flag" == "non-valid" ]];then
- 				break
- 			fi
+
  		done
- 			echo $flag
-
-
+ 		echo $flag
 
 }
 
