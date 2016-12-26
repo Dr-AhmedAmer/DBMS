@@ -1,17 +1,10 @@
+#!/usr/bin/env bash
 main_dir="/usr/local/bash_dbms"
 users_file="/usr/local/bash_dbms/users_file"
+# function table_insert { }
 
-
-
-# function table_insert {
-
-
-
-
-# }
-
-
- function check_headers_datatype  { #checks datatypes during table first creation
+#checks datatypes during table first creation
+ function check_headers_datatype  { 
  		declare -a valid=('int' 'char');
  		local data_types=''
  		local i
@@ -28,7 +21,6 @@ users_file="/usr/local/bash_dbms/users_file"
 
  		for i in "${array[@]}"
  		do
-
  			flag=non-valid
  			for k in "${valid[@]}"
  			do
@@ -36,20 +28,14 @@ users_file="/usr/local/bash_dbms/users_file"
  					flag=valid
  					break
  				fi
-
  			done
-
  		done
- 			echo $flag
+ 		echo $flag
 
 }
 
-
-
-
-
-function get_headers { #concat table headers
-
+#concat table headers
+function get_headers { 
 	local insert_statment=$(echo $* | awk 'BEGIN {FS = " "} { for ( i = 1;i <= NF;i++ ) { if (i = NF) print $i }  } ')
 	local temp_headers=$(echo $insert_statment | awk 'BEGIN {FS = "("} {print $2}')
 	local headers=$(echo $temp_headers | awk 'BEGIN {FS = ")"} {print $1}')
@@ -57,8 +43,8 @@ function get_headers { #concat table headers
 
 }
 
-
-function check_format { # checks for (.... ....,..... ...,...... ....) fromat
+# checks for (.... ....,..... ...,...... ....) fromat
+function check_format {
 
 	local insert_statment=$(echo $* | awk 'BEGIN {FS = " "} { for ( i = 1;i <= NF;i++ ) { if (i = NF) print $i }  } ')
 	local first_insert_instance=$(echo $insert_statment | awk 'BEGIN {FS = ","} { for ( i = 1;i <= 1;i++ ) { if (i = 1) print $i }  } ')
@@ -67,56 +53,45 @@ function check_format { # checks for (.... ....,..... ...,...... ....) fromat
 	local i=$((${#input}-1))
 	local last_char=$(echo "${input:$i:1}")
 	local flag=0;
-	if [[ "$(echo $first_char)" == "(" ]] && [[ "$(echo $last_char)" == ")" ]];then
 
+	if [[ "$(echo $first_char)" == "(" ]] && [[ "$(echo $last_char)" == ")" ]];then
 		flag=1
 		echo $flag
-
 	else
-
 		echo $flag 
-
 	fi
 
 }
 
-
-function process_command { #processes commands and redirects workflow according 
+#processes commands and redirects workflow according 
+function process_command { 
 
 	if [[ "$1" == "create" ]];then
 		creator $*
 	fi
 
 	if [[ "$1" == "use" ]];then
-
 		use $*
 	fi
 
 	if [[ "$1" == "check" ]];then
-
 		check_place
 	fi
 
 	if [[ "$1" == "insert" ]] && [[ "$2" == "into" ]];then
-
 		table_insert $*
 	fi
 
 	if [[ "$1" == "show" ]];then
-
 		show $*
 	fi
 
 	if [[ "$1" == "remove" ]];then
-
 		remove $*
 	fi
-
 }
 
-
 function remove {
-
 	if [[ "$2" == "table" ]];then
 		remove_table $*
 		elif [[ "$2" == "database" ]]; then
@@ -126,21 +101,15 @@ function remove {
 }
 
 function remove_table {
-
-
 	if [[ $(pwd) != $main_dir ]];then
-		
 		if [ -f $3 ];then
-
 			rm $3
 			echo -e "\033[33;31m tabel $3 removed !"
 			echo -en "\e[0m"	
 		else
 			echo -e "\033[33;31m No tables with this name"
 			echo -en "\e[0m"	
-
 		fi
-
 	else
 		echo -e "\033[33;31m Select a database first"
 		echo -e "\033[33;31m You can use show databases to list availabe databases"
@@ -148,16 +117,12 @@ function remove_table {
 	fi
 }
 
-
-function check_place { # for internal testing 
-
+# for internal testing 
+function check_place { 
 	echo $(pwd)
 }
 
-
-
 function show {
-
 	if [[ "$2" == "tables" ]];then
 		show_tables $*
 		elif [[ "$2" == "databases" ]]; then
@@ -167,9 +132,8 @@ function show {
 }
 
 function show_tables {
-
 	if [[ $(pwd) != $main_dir ]];then
-	ls -l $(pwd) | awk 'BEGIN{FS=" "}{if($0!="")print $9}'
+    	ls -l $(pwd) | awk 'BEGIN{FS=" "}{if($0!="")print $9}'
 	else
 		echo -e "\033[33;31m Select a database first"
 		echo -e "\033[33;31m You can use show databases to list availabe databases"
@@ -177,43 +141,31 @@ function show_tables {
 	fi
 }
 
-
 function show_databases {
 	subdircount=`find "$main_dir"/"" -maxdepth 1 -type d | wc -l`
-
 	if [ $subdircount -eq 1 ];then
-							
-    echo -e "\033[33;31m No Databases Found"
-    echo -en "\e[0m"
-
+        echo -e "\033[33;31m No Databases Found"
+        echo -en "\e[0m"
 	else
-
-    ls -dl "$main_dir"/*/"" | awk 'BEGIN{FS=" "}{ print $9}' | 
-	awk 'BEGIN{FS="/"}{ print $5 }'
+        ls -dl "$main_dir"/*/"" | awk 'BEGIN{FS=" "}{ print $9}' | 
+	    awk 'BEGIN{FS="/"}{ print $5 }'
 	fi
-	 
-
 }
 
-
-function use { #changes working directory to the selected database dir 
-
+#changes working directory to the selected database dir 
+function use {
 	if test -e "$main_dir"/""$2"" ;then
-
 		cd "$main_dir"/""$2""
 		sleep 0.01
 		echo -e "\033[33;34m Database changed to $2"
 		echo -en "\e[0m"
-
 	else
 		echo database not exits
 	fi
 }
 
-
-
-function creator {  #recieves any create command then redirects 
-
+#recieves any create command then redirects 
+function creator { 
 	if [[ "$2" == "table" ]];then
 		table_creator $*
 		elif [[ "$2" == "database" ]]; then
@@ -221,27 +173,22 @@ function creator {  #recieves any create command then redirects
 	fi
 }
 
-function table_creator {     #checks if user is assigned to database and creates a new file for every table
-
+#checks if user is assigned to database and creates a new file for every table
+function table_creator {     
 	local code1=$(check_place)
 	local check
 	local check_two
 	if [[ $code1 == "$main_dir" ]]; then
-
 		echo 'You must select database first'
 	else
 		check=$(check_format $*)
 		local table="$(pwd)"/"$3" 
-
 		if [[ check -eq 1 ]]; then
-
 			if [ ! -f  $table ]; then
-
 				check_two=$(check_headers_datatype $*)
-
 				if [[ $check_two == "valid" ]];then
 					$(touch $3)	
-					create=$(get_headers $* concat		sleep .01
+                    create=$(get_headers $* concat sleep .01)
 					echo -e "\033[33;34m table $3 created"
 					echo -en "\e[0m"
 				else
@@ -255,15 +202,12 @@ function table_creator {     #checks if user is assigned to database and creates
 			echo -e "\033[33;32m syntax error"
 			echo -en "\e[0m" 
 		fi
-
 		sleep 0.01 
 	fi
-
 }
 
-
-function database_creator { #checks if there is adirectory already matching the to be created database , creates new dir for every DB
-
+#checks if there is adirectory already matching the to be created database , creates new dir for every DB
+function database_creator { 
 	local raw_database_name="${*: -1}"
 	local database_path
 	local response
@@ -278,35 +222,26 @@ function database_creator { #checks if there is adirectory already matching the 
 	fi
 }
 
-
-
-
-function cmd_loop {  #command prompt for input
-
+#command prompt for input
+function cmd_loop { 
 	clear
 	echo Please Enter commands:
 	local cmd_raw=$(get_command) 
-
 	while [[ $cmd_raw != "exit" ]]  ; do	
 		process_command $cmd_raw
 		cmd_raw=$(get_command)
 	done
 }
 
-function get_command { #get command from user
-
+#get command from user
+function get_command {
 	local input
 	read input
-
 	echo $input | awk 'BEGIN{FS = " "}{ for(i = 1; i <= NF; i++) { print $i; } }'		
-
 }
 
-
-
-
-function create_user { #creates new user and adds his/her login info to users_file
-
+#creates new user and adds his/her login info to users_file
+function create_user {
 	echo Please Enter login name :
 	read login_name
 	echo Please Enter password :
@@ -332,8 +267,8 @@ function login {
 	fi	
 }
 
-function first_login {    #check if main dir is present and redirects user to login or create user according to result
-	
+#check if main dir is present and redirects user to login or create user according to result
+function first_login {   
 	if [[ ! -e $main_dir ]];then  
 		initialize_env
 		echo You have to creat a root user:
@@ -345,8 +280,8 @@ function first_login {    #check if main dir is present and redirects user to lo
 		login
 	fi
 }
-function initialize_env {
 
+function initialize_env {
 	if [[ ! -e $main_dir ]];then  
 		sudo mkdir -p $main_dir
 		sudo touch $users_file
