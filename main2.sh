@@ -1,11 +1,49 @@
+#!/bin/bash
 main_dir="/usr/local/bash_dbms"
 users_file="/usr/local/bash_dbms/users_file"
+
+function valid_insert_datatype {
+	local insert_statment=$(echo $* | awk 'BEGIN {FS = " "} { for ( i = 1;i <= NF;i++ ) { if (i = NF) print $i }  } ')
+	local temp_values=$(echo $insert_statment | awk 'BEGIN {FS = "("} {print $2}')
+	local raw_values=$(echo $temp_values | awk 'BEGIN {FS = ")"} {print $1}')
+	local values=($(echo $raw_values | awk 'BEGIN {FS=","}{for(i=1;i<=NF;i++) print $i}'))
+	local data_types=($(get_colum_datatypes $4))
+	local re='^[0-9]+$'
+	local flag
+	local i
+	i=0;
+	flag=0;
+
+	for value in "${values[@]}"
+	do
+		if [[ "${data_types[$i]}" == "int" ]];then
+			if [[ $value =~ $re ]];then
+				flag=1;
+			else
+				flag=0;
+			fi
+		else
+			if ! [[ $value =~ $re  ]];then
+				flag=1;
+			else
+				flag=0;
+
+			fi
+		fi
+		i=$i+1;
+	done
+
+	echo $flag
+	 
+
+}
 
 
 function get_colum_datatypes {
 
 	 local data_types=$(head -1 $1 | awk 'BEGIN{FS=","; OFS=":"}{$1=$1 ;print $0}'|awk 'BEGIN{FS=":"}{for(i=1;i<=NF;i++) if(!(i%2)) print $i }')
 	 read -a data_array <<< $data_types
+	 echo $data_types
 
 }
 
@@ -29,9 +67,7 @@ function check_insert_syntax { #check insert synatx "insert into table table_nam
 }
 
 
-
- function table_insert {
-
+ function table_insert {   
  	local check_path=$(check_place)      #get number of colums
  	local check_form=$(check_format $*)
  	local check_num_colum=$(get_colum_count $4)
@@ -41,6 +77,8 @@ function check_insert_syntax { #check insert synatx "insert into table table_nam
 	local values=$(echo $raw_values | awk 'BEGIN {FS=","}{print NF}')
 	read -a values_array <<<$values
 	local values_count=$(echo ${values_array[@]})
+	local data_types=$(get_colum_datatypes $4)
+	local valid_insertion=$(valid_insert_datatype $*)
 
  	if [[ "$check_path" == "$main_dir" ]];then #check if databse is selected
  		echo choose db first;
@@ -51,8 +89,13 @@ function check_insert_syntax { #check insert synatx "insert into table table_nam
  			if [[ check_form -eq 1 ]];then #check format (...,...,..)
 
  				if [[ $check_num_colum -eq $values_count ]];then #check number of colums 
- 					echo $raw_values >> $4;
- 					echo insert data sucess
+ 					
+ 					if [[ $valid_insertion -eq 1 ]];then
+ 						echo $raw_values >> $4;
+ 						echo insert data sucess
+ 					else
+ 						echo incompatible data types
+ 					fi
  				else
  					echo wrong number of colums
  				fi
@@ -67,6 +110,7 @@ function check_insert_syntax { #check insert synatx "insert into table table_nam
 
 
  }
+
 
 
  function check_headers_datatype  { #checks datatypes during table first creation
