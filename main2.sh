@@ -2,13 +2,71 @@ main_dir="/usr/local/bash_dbms"
 users_file="/usr/local/bash_dbms/users_file"
 
 
+function get_colum_datatypes {
 
-# function table_insert {
+	 local data_types=$(head -1 $1 | awk 'BEGIN{FS=","; OFS=":"}{$1=$1 ;print $0}'|awk 'BEGIN{FS=":"}{for(i=1;i<=NF;i++) if(!(i%2)) print $i }')
+	 read -a data_array <<< $data_types
+
+}
+
+function get_colum_count { #get numbers of column to check against during insertion
+	local index
+	index=0;
+	local count_string=$(head -n1 $1 | awk 'BEGIN{FS=","}{print NF}')
+	read -a count_array <<<$count_string
+	echo ${count_array[@]}
+}
+
+function check_insert_syntax { #check insert synatx "insert into table table_name ()"
+
+	if [[ "$2" == "into" ]] && [[ "$3" == "table" ]];then
+		table_insert $*;
+	else
+		echo "syntax error";
+	fi
+
+
+}
 
 
 
+ function table_insert {
 
-# }
+ 	local check_path=$(check_place)      #get number of colums
+ 	local check_form=$(check_format $*)
+ 	local check_num_colum=$(get_colum_count $4)
+ 	local insert_statment=$(echo $* | awk 'BEGIN {FS = " "} { for ( i = 1;i <= NF;i++ ) { if (i = NF) print $i }  } ') #get number of values
+	local temp_values=$(echo $insert_statment | awk 'BEGIN {FS = "("} {print $2}')
+	local raw_values=$(echo $temp_values | awk 'BEGIN {FS = ")"} {print $1}')
+	local values=$(echo $raw_values | awk 'BEGIN {FS=","}{print NF}')
+	read -a values_array <<<$values
+	local values_count=$(echo ${values_array[@]})
+
+ 	if [[ "$check_path" == "$main_dir" ]];then #check if databse is selected
+ 		echo choose db first;
+ 	else
+
+ 		if [[ -f $4 ]];then #check if table is present
+
+ 			if [[ check_form -eq 1 ]];then #check format (...,...,..)
+
+ 				if [[ $check_num_colum -eq $values_count ]];then #check number of colums 
+ 					echo $raw_values >> $4;
+ 					echo insert data sucess
+ 				else
+ 					echo wrong number of colums
+ 				fi
+ 			else
+ 				echo check format;
+ 			fi
+ 		else
+ 			echo no table with this name;
+ 		fi
+ 	fi
+
+
+
+ }
 
 
  function check_headers_datatype  { #checks datatypes during table first creation
@@ -53,7 +111,8 @@ function get_headers { #concat table headers
 	local insert_statment=$(echo $* | awk 'BEGIN {FS = " "} { for ( i = 1;i <= NF;i++ ) { if (i = NF) print $i }  } ')
 	local temp_headers=$(echo $insert_statment | awk 'BEGIN {FS = "("} {print $2}')
 	local headers=$(echo $temp_headers | awk 'BEGIN {FS = ")"} {print $1}')
-	echo $headers
+	echo $headers >$3
+
 
 }
 
@@ -97,10 +156,6 @@ function process_command { #processes commands and redirects workflow according
 		check_place
 	fi
 
-	if [[ "$1" == "insert" ]] && [[ "$2" == "into" ]];then
-
-		table_insert $*
-	fi
 
 	if [[ "$1" == "show" ]];then
 
@@ -110,6 +165,11 @@ function process_command { #processes commands and redirects workflow according
 	if [[ "$1" == "remove" ]];then
 
 		remove $*
+	fi
+
+	if [[ "$1" == "insert" ]];then
+
+		check_insert_syntax $*
 	fi
 
 }
@@ -241,7 +301,8 @@ function table_creator {     #checks if user is assigned to database and creates
 
 				if [[ $check_two == "valid" ]];then
 					$(touch $3)	
-					create=$(get_headers $* concat		sleep .01
+					create=$(get_headers $* )
+					sleep .01
 					echo -e "\033[33;34m table $3 created"
 					echo -en "\e[0m"
 				else
