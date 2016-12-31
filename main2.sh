@@ -60,7 +60,7 @@ function check_insert_syntax { #check insert synatx "insert into table table_nam
 	if [[ "$2" == "into" ]] && [[ "$3" == "table" ]];then
 		table_insert $*;
 	else
-		echo "syntax error";
+		zenity --error --text="syntax error";
 	fi
 
 
@@ -81,7 +81,7 @@ function check_insert_syntax { #check insert synatx "insert into table table_nam
 	local valid_insertion=$(valid_insert_datatype $*)
 
  	if [[ "$check_path" == "$main_dir" ]];then #check if databse is selected
- 		echo choose db first;
+ 		zenity --error --text="choose db first"
  	else
 
  		if [[ -f $4 ]];then #check if table is present
@@ -92,18 +92,18 @@ function check_insert_syntax { #check insert synatx "insert into table table_nam
  					
  					if [[ $valid_insertion -eq 1 ]];then
  						echo $raw_values >> $4;
- 						echo insert data sucess
+ 						zenity --info --text="insert data sucess"
  					else
- 						echo incompatible data types
+ 						zenity --error --text="incompatible data types"
  					fi
  				else
- 					echo wrong number of colums
+ 					zenity --error --text="wrong number of colums"
  				fi
  			else
- 				echo check format;
+ 				zenity --error --text="check format"
  			fi
  		else
- 			echo no table with this name;
+ 			zenity --error --text="no table with this name"
  		fi
  	fi
 
@@ -219,16 +219,13 @@ function remove_table {
 	if [[ $(pwd) != $main_dir ]];then
 		if [ -f $3 ];then
 			rm $3
-			echo -e "\033[33;31m tabel $3 removed !"
-			echo -en "\e[0m"	
+			zenity --info --tex="tabel $3 removed !"
 		else
-			echo -e "\033[33;31m No tables with this name"
-			echo -en "\e[0m"	
+			zenity --error --text="No tables with this name"
 		fi
 	else
-		echo -e "\033[33;31m Select a database first"
-		echo -e "\033[33;31m You can use show databases to list availabe databases"
-    	echo -en "\e[0m" 
+		zenity --error --text="Select a database first"
+		zenity --info --text="You can use show databases to list availabe databases"
 	fi
 }
 
@@ -250,17 +247,15 @@ function show_tables {
 	if [[ $(pwd) != $main_dir ]];then
     	ls -l $(pwd) | awk 'BEGIN{FS=" "}{if($0!="")print $9}'
 	else
-		echo -e "\033[33;31m Select a database first"
-		echo -e "\033[33;31m You can use show databases to list availabe databases"
-    	echo -en "\e[0m" 
+		zenity --error --text="Select a database first"
+		zenity --info --text="You can use show databases to list availabe databases"
 	fi
 }
 
 function show_databases {
 	subdircount=`find "$main_dir"/"" -maxdepth 1 -type d | wc -l`
 	if [ $subdircount -eq 1 ];then
-        echo -e "\033[33;31m No Databases Found"
-        echo -en "\e[0m"
+        zenity --warning --text="No Databases Found"
 	else
         ls -dl "$main_dir"/*/"" | awk 'BEGIN{FS=" "}{ print $9}' | 
 	    awk 'BEGIN{FS="/"}{ print $5 }'
@@ -272,10 +267,9 @@ function use {
 	if test -e "$main_dir"/""$2"" ;then
 		cd "$main_dir"/""$2""
 		sleep 0.01
-		echo -e "\033[33;34m Database changed to $2"
-		echo -en "\e[0m"
+		zenity --info --text="Database changed to $2"
 	else
-		echo database not exits
+		zenity --error --text="database not exits"
 	fi
 }
 
@@ -294,7 +288,7 @@ function table_creator {
 	local check
 	local check_two
 	if [[ $code1 == "$main_dir" ]]; then
-		echo 'You must select database first'
+		zenity --warning --text="You must select database first"
 	else
 		check=$(check_format $*)
 		local table="$(pwd)"/"$3" 
@@ -305,18 +299,15 @@ function table_creator {
 					$(touch $3)	
 					create=$(get_headers $* )
 					sleep .01
-					echo -e "\033[33;34m table $3 created"
-					echo -en "\e[0m"
+					  zenity --info --text="table $3 created"
 				else
-					echo "Non-valid data_types"
+					zentiy --error --text="Non-valid data_types"
 				fi
 			else
-				echo -e "\033[33;31m table already exits"
-				echo -en "\e[0m" 
+			    zenity --warning --text="table already exits"
 			fi 
 		else
-			echo -e "\033[33;32m syntax error"
-			echo -en "\e[0m" 
+			zenity --error --text="syntax error"
 		fi
 		sleep 0.01 
 	fi
@@ -329,20 +320,21 @@ function database_creator {
 	local response
 	database_path="$main_dir"/"$raw_database_name"
 	if [ -d "$database_path" ];then
-		echo database already exits
+		zenity --warning --text="database already exits"
 	else
 	sleep 0.01
 	$(mkdir $database_path) 
-	echo "$raw_database_name created"
-	echo  Type use database_name to change working database
+	zenity --info --text="$raw_database_name created"
+	zenity --info --text="Type use database_name to change working database"
 	fi
 }
 
 #command prompt for input
 function cmd_loop { 
 	clear
-	echo Please Enter commands:
+	zenity --info --text="You can enter commands:"
 	local cmd_raw=$(get_command) 
+    
 	while [[ $cmd_raw != "exit" ]]  ; do	
 		process_command $cmd_raw
 		cmd_raw=$(get_command)
@@ -351,8 +343,7 @@ function cmd_loop {
 
 #get command from user
 function get_command {
-	local input
-	read input
+    local input=$(zenity --text-info --title="DBMS Commands" --cancel-label="Type exit and press Excute to quit" --ok-label="Excute!" --editable --width=800 --height=600)
 	echo $input | awk 'BEGIN{FS = " "}{ for(i = 1; i <= NF; i++) { print $i; } }'		
 }
 
@@ -379,7 +370,7 @@ function login {
 	if awk 'BEGIN{FS=":"}{if($1=="'"$login_name"'") print $1}' $users_file | grep $login_name >/dev/null &&
 	awk 'BEGIN{FS=":"}{if($2=="'"$password"'") print $2}' $users_file | grep $password >/dev/null
     then
-        zenity --info --text "you are now logged in" 
+        zenity --info --text="you are now logged in" 
 	    cd "$main_dir"
 	    sleep 0.01
 	    cmd_loop
