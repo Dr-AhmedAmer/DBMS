@@ -245,7 +245,7 @@ function show {
 
 function show_tables {
 	if [[ $(pwd) != $main_dir ]];then
-    	ls -l $(pwd) | awk 'BEGIN{FS=" "}{if($0!="")print $9}'
+    	ls -l $(pwd) | awk 'BEGIN{FS=" "}{if($0!="")print $9}'|zenity --text-info --title="Tables"
 	else
 		zenity --error --text="Select a database first"
 		zenity --info --text="You can use show databases to list availabe databases"
@@ -258,7 +258,7 @@ function show_databases {
         zenity --warning --text="No Databases Found"
 	else
         ls -dl "$main_dir"/*/"" | awk 'BEGIN{FS=" "}{ print $9}' | 
-	    awk 'BEGIN{FS="/"}{ print $5 }'
+	    awk 'BEGIN{FS="/"}{ print $5 }'|zenity --text-info --title="Databases"
 	fi
 }
 
