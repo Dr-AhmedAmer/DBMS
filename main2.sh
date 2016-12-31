@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-main_dir="/usr/local/bash_dbms"
-users_file="/usr/local/bash_dbms/users_file"
+main_dir="$HOME/bash_dbms"
+users_file="$main_dir/users_file"
 
 function valid_insert_datatype {
 	local insert_statment=$(echo $* | awk 'BEGIN {FS = " "} { for ( i = 1;i <= NF;i++ ) { if (i = NF) print $i }  } ')
@@ -358,27 +358,33 @@ function get_command {
 
 #creates new user and adds his/her login info to users_file
 function create_user {
-    local user=''
-    local password=''
-    user=$(zenity --title "create new user" --entry --text "enter user name:")
-    password=$(zenity --title "create new user" --entry --text "enter user password:")
-
-    echo "$user:$password">$users_file
+    zenity --forms --title="Add User" \
+           --text="Please Enter user login and password" \
+           --separator=":" \
+           --add-entry="User" \
+           --add-password="Password">$users_file
 	cd "$main_dir"
 }
 
 function login {
 	clear
-    login_name=$(zenity --title "user login" --entry --text "enter user name:")
-    password=$(zenity --title "user login" --entry --text "enter user password:")
+    OUTPUT=$(zenity --forms --title="User Login" \
+           --text="Please Enter user login and password" \
+           --separator=":" \
+           --add-entry="User" \
+           --add-password="Password")
+    login_name=$(awk 'BEGIN{FS=":"}{print $1}'<<<$OUTPUT)
+    password=$(awk 'BEGIN{FS=":"}{print $2}'<<<$OUTPUT)
+    if [[ ! $OUTPUT ]];then exit 0;fi
 	if awk 'BEGIN{FS=":"}{if($1=="'"$login_name"'") print $1}' $users_file | grep $login_name >/dev/null &&
-	awk 'BEGIN{FS=":"}{if($2=="'"$password"'") print $2}' $users_file | grep $password >/dev/null ; then
-    zenity --info --text "you are now logged in" 
-	cd "$main_dir"
-	sleep 0.01
-	cmd_loop
+	awk 'BEGIN{FS=":"}{if($2=="'"$password"'") print $2}' $users_file | grep $password >/dev/null
+    then
+        zenity --info --text "you are now logged in" 
+	    cd "$main_dir"
+	    sleep 0.01
+	    cmd_loop
 	else
-	login
+	    login
 	fi	
 }
 
@@ -386,7 +392,7 @@ function login {
 function first_login {   
 	if [[ ! -e $main_dir ]];then  
 		initialize_env
-        gdialog --msgbox "you have to create user" 5 20
+        zenity --info --text "you have to create a user"
 		sleep 1
 		clear
 		create_user
@@ -397,13 +403,18 @@ function first_login {
 }
 
 function initialize_env {
-	if [[ ! -e $main_dir ]];then  
-		sudo mkdir -p $main_dir
-		sudo touch $users_file
-		sudo chmod 555 $users_file 
-		sudo chmod 555 $main_dir
-		cd "$main_dir"
-	fi
+    zenity --info --text "Welcome "$USERNAME" to our useless dbms"
+    zenity  --question --text "Are you sure you wish to proceed?"
+    if [[ $? -eq 0 ]]
+    then
+    	if [[ ! -e $main_dir ]];then
+            mkdir -p $main_dir;touch $users_file
+	    	cd "$main_dir"
+        fi
+    else
+        zenity --info --text "You just saved your time"
+        exit 0
+    fi
 }
 
 first_login
