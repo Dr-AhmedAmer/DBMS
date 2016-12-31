@@ -269,7 +269,7 @@ function show_databases {
 
 #changes working directory to the selected database dir 
 function use {
-	if test -e "$main_dir"/""$2"" ;then
+	if test -e "$main_dir"/""$2"" && [[ "$2" != "" ]] ;then
 		cd "$main_dir"/""$2""
 		sleep 0.01
 		echo -e "\033[33;34m Database changed to $2"
