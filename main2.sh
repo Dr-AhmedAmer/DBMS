@@ -2,6 +2,25 @@
 main_dir="/usr/local/bash_dbms"
 users_file="/usr/local/bash_dbms/users_file"
 
+
+
+function select_all {
+
+	if  [[ "$3" == "from" ]] ; then
+
+		if [[ -f $4 ]];then
+			echo -e "\n"
+			column -t -s "," $4
+			echo -e "\n"
+
+		else
+			echo No table with this name
+
+		fi
+
+	fi
+}
+
 function valid_insert_datatype {
 	local insert_statment=$(echo $* | awk 'BEGIN {FS = " "} { for ( i = 1;i <= NF;i++ ) { if (i = NF) print $i }  } ')
 	local temp_values=$(echo $insert_statment | awk 'BEGIN {FS = "("} {print $2}')
@@ -202,6 +221,11 @@ function process_command {
 	if [[ "$1" == "insert" ]];then
 
 		check_insert_syntax $*
+	fi
+
+	if [[ "$1" == "select" ]] && [[ "$2" == "all" ]];then
+
+		select_all $*
 	fi
 
 }
