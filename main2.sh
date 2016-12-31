@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bash
 main_dir="/usr/local/bash_dbms"
 users_file="/usr/local/bash_dbms/users_file"
@@ -359,23 +358,22 @@ function get_command {
 
 #creates new user and adds his/her login info to users_file
 function create_user {
-	echo Please Enter login name :
-	read login_name
-	echo Please Enter password :
-	read password
-	echo "$login_name:$password">$users_file
+    local user=''
+    local password=''
+    user=$(zenity --title "create new user" --entry --text "enter user name:")
+    password=$(zenity --title "create new user" --entry --text "enter user password:")
+
+    echo "$user:$password">$users_file
 	cd "$main_dir"
 }
 
 function login {
 	clear
-	echo Please Enter login name :
-	read login_name
-	echo Please Enter password :
-	read password
+    login_name=$(zenity --title "user login" --entry --text "enter user name:")
+    password=$(zenity --title "user login" --entry --text "enter user password:")
 	if awk 'BEGIN{FS=":"}{if($1=="'"$login_name"'") print $1}' $users_file | grep $login_name >/dev/null &&
 	awk 'BEGIN{FS=":"}{if($2=="'"$password"'") print $2}' $users_file | grep $password >/dev/null ; then
-	echo "You are now logged in as $login_name"
+    zenity --info --text "you are now logged in" 
 	cd "$main_dir"
 	sleep 0.01
 	cmd_loop
@@ -388,7 +386,7 @@ function login {
 function first_login {   
 	if [[ ! -e $main_dir ]];then  
 		initialize_env
-		echo You have to creat a root user:
+        gdialog --msgbox "you have to create user" 5 20
 		sleep 1
 		clear
 		create_user
