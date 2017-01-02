@@ -3,6 +3,35 @@ main_dir="/usr/local/bash_dbms"
 users_file="/usr/local/bash_dbms/users_file"
 
 
+function select_column {
+	local OFS='BEGIN{OFS=" "}'
+	local result=''
+	local column_to_select
+	column_to_select=$2
+	local columns=($(head -1 $4 |awk 'BEGIN{FS=",";OFS=":"}{$1=$1; print $0}'| awk 'BEGIN{FS=":"}{for(i=1;i<=NF;i++) if(i%2) print $i}'));
+	local select_columns=($(echo $2|awk 'BEGIN{FS=","}{for(i=1;i<=NF;i++) print $i}'))
+	declare -A MYMAP
+	typeset -i ind
+	typeset -i ind_awk
+	ind_awk=0
+	ind=0
+	for column in "${columns[@]}"
+	do
+		MYMAP[$column]=$ind
+		ind=$ind+1
+	done
+
+	for var in "${select_columns[@]}"
+	do
+		ind_awk=MYMAP[$var]
+		ind_awk=$ind_awk+1
+		result="$result\$$ind_awk\"  \" "
+	done
+		
+
+	 gawk -c -F',' "$(echo $OFS){\$1=\$1; print $(echo $result)}" $4  |column -t -s" "
+
+}
 
 function select_all {
 
@@ -226,6 +255,11 @@ function process_command {
 	if [[ "$1" == "select" ]] && [[ "$2" == "all" ]];then
 
 		select_all $*
+	fi
+
+	if [[ "$1" == "select" ]] && [[ "$2" != "all" ]];then
+
+		select_column $*
 	fi
 
 }
