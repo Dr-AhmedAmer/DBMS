@@ -1,14 +1,69 @@
 #!/usr/bin/env bash
 main_dir="/usr/local/bash_dbms"
 users_file="/usr/local/bash_dbms/users_file"
+p_key=""
+
+function format_primary_key
+{
+	local columns=($(head -1 $3 |awk 'BEGIN{FS=",";OFS=":"}{$1=$1; print $0}'| awk 'BEGIN{FS=":"}{for(i=1;i<=NF;i++) if(i%2) print $i}'))
+	declare -A MYMAP
+	typeset -i ind
+	typeset -i ind_awk
+	ind_awk=0
+	ind=0
+	for column in "${columns[@]}"
+	do
+		MYMAP[$column]=$ind
+		ind=$ind+1
+	done
+
+}
 
 
+
+
+function set_primary_key
+{
+	local flag=0
+	local headers=($(get_headers $*))
+	headers=($(echo $headers |awk 'BEGIN{FS=",";OFS=":"}{$1=$1; print $0}'| awk 'BEGIN{FS=":"}{for(i=1;i<=NF;i++) if(i%2) print $i}')) 
+	echo "select primary key"
+	read primary_key
+	for key in ${headers[@]}
+	do
+		if [[ $key == $primary_key ]];then #validates primary key is in table headers
+			flag=1
+		fi
+	done
+
+	if [[ flag -eq 1 ]];then
+		echo "primary_key set sucess"
+		p_key=$primary_key 
+	else
+		echo "non-valid primary_key"
+	fi
+
+	return $flag
+
+}
+
+
+
+function delete_row 
+{
+	if [[ $3 -ne 1 ]];then
+		sed -i "$3 d" $5
+		echo "row $3 deleted"
+	else
+		echo "cannot delete table header"
+	fi
+}
 function select_column {
 	local OFS='BEGIN{OFS=" "}'
 	local result=''
 	local column_to_select
 	column_to_select=$2
-	local columns=($(head -1 $4 |awk 'BEGIN{FS=",";OFS=":"}{$1=$1; print $0}'| awk 'BEGIN{FS=":"}{for(i=1;i<=NF;i++) if(i%2) print $i}'));
+	local columns=($(head -1 $4 |awk 'BEGIN{FS=",";OFS=":"}{$1=$1; print $0}'| awk 'BEGIN{FS=":"}{for(i=1;i<=NF;i++) if(i%2) print $i}'))
 	local select_columns=($(echo $2|awk 'BEGIN{FS=","}{for(i=1;i<=NF;i++) print $i}'))
 	declare -A MYMAP
 	typeset -i ind
@@ -27,10 +82,10 @@ function select_column {
 		ind_awk=$ind_awk+1
 		result="$result\$$ind_awk\"  \" "
 	done
-		
 
-	 gawk -c -F',' "$(echo $OFS){\$1=\$1; print $(echo $result)}" $4  |column -t -s" "
-
+		echo -e "\n"
+	 	gawk -c -F',' "$(echo $OFS){\$1=\$1; print $(echo $result)}" $4  |column -t -s" "
+	
 }
 
 function select_all {
@@ -38,6 +93,7 @@ function select_all {
 	if  [[ "$3" == "from" ]] ; then
 
 		if [[ -f $4 ]];then
+			
 			echo -e "\n"
 			column -t -s "," $4
 			echo -e "\n"
@@ -193,11 +249,20 @@ function check_insert_syntax { #check insert synatx "insert into table table_nam
 }
 
 #concat table headers
-function get_headers { 
+function set_headers { 
 	local insert_statment=$(echo $* | awk 'BEGIN {FS = " "} { for ( i = 1;i <= NF;i++ ) { if (i = NF) print $i }  } ')
 	local temp_headers=$(echo $insert_statment | awk 'BEGIN {FS = "("} {print $2}')
 	local headers=$(echo $temp_headers | awk 'BEGIN {FS = ")"} {print $1}')
 	echo $headers >$3
+
+
+}
+#gets table header
+function get_headers { 
+	local insert_statment=$(echo $* | awk 'BEGIN {FS = " "} { for ( i = 1;i <= NF;i++ ) { if (i = NF) print $i }  } ')
+	local temp_headers=$(echo $insert_statment | awk 'BEGIN {FS = "("} {print $2}')
+	local headers=$(echo $temp_headers | awk 'BEGIN {FS = ")"} {print $1}')
+	echo $headers
 
 
 }
@@ -261,6 +326,16 @@ function process_command {
 
 		select_column $*
 	fi
+
+	if [[ "$1" == "clear" ]];then
+
+		clear
+	fi
+	if [[ "$1" == "delete" ]] && [[ "$2" == "row" ]] ;then
+		delete_row $*
+	fi
+
+
 
 }
 
@@ -348,6 +423,7 @@ function creator {
 
 #checks if user is assigned to database and creates a new file for every table
 function table_creator {     
+	local primary_key_status
 	local code1=$(check_place)
 	local check
 	local check_two
@@ -360,11 +436,19 @@ function table_creator {
 			if [ ! -f  $table ]; then
 				check_two=$(check_headers_datatype $*)
 				if [[ $check_two == "valid" ]];then
-					$(touch $3)	
-					create=$(get_headers $* )
-					sleep .01
-					echo -e "\033[33;34m table $3 created"
-					echo -en "\e[0m"
+					set_primary_key $* 
+					if [[ $? == 1 ]];then
+						$(touch $3)	
+						create=$(set_headers $* )
+						sleep .01
+						echo -e "\033[33;34m table $3 created"
+						echo -en "\e[0m"
+						echo "primary_key=>$p_key" >> $3
+					else
+						echo "primary_key set failed"
+						echo "failed to create table $3"
+					fi
+					
 				else
 					echo "Non-valid data_types"
 				fi
