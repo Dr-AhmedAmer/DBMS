@@ -4,28 +4,28 @@ users_file="/usr/local/bash_dbms/users_file"
 p_key=""
 
 
-function uodate_row 
-{
-local re='^[0-9]+$'
-local line_num
-typeset -i line_num
-line_num=$(wc -l < $5)
-	if [[ -f $5 ]];then
-		if [[ $3 =~ $re ]] && [[ $3 -le $line_num ]];then
-			if [[ $3 -ne 1 ]];then
-				sed -i "$3 d" $5
-				sed -i "$3 d" $5.index
-				echo "row $3 deleted"
-			else
-				echo "cannot delete table header"
-			fi
-		else
-			echo "non valid number"
-		fi
-	else
-		echo "No table with this name"
-	fi
-}
+# function uodate_row 
+# {
+# local re='^[0-9]+$'
+# local line_num
+# typeset -i line_num
+# line_num=$(wc -l < $5)
+# 	if [[ -f $5 ]];then
+# 		if [[ $3 =~ $re ]] && [[ $3 -le $line_num ]];then
+# 			if [[ $3 -ne 1 ]];then
+# 				sed -i "$3 d" $5
+# 				sed -i "$3 d" $5.index
+# 				echo "row $3 deleted"
+# 			else
+# 				echo "cannot delete table header"
+# 			fi
+# 		else
+# 			echo "non valid number"
+# 		fi
+# 	else
+# 		echo "No table with this name"
+# 	fi
+# }
 
 
 function validate_unique_primary_key
