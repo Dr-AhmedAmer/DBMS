@@ -3,26 +3,71 @@ main_dir="/usr/local/bash_dbms"
 users_file="/usr/local/bash_dbms/users_file"
 p_key=""
 
-function format_primary_key
-{
-	local columns=($(head -1 $3 |awk 'BEGIN{FS=",";OFS=":"}{$1=$1; print $0}'| awk 'BEGIN{FS=":"}{for(i=1;i<=NF;i++) if(i%2) print $i}'))
-	declare -A MYMAP
-	typeset -i ind
-	typeset -i ind_awk
-	ind_awk=0
-	ind=0
-	for column in "${columns[@]}"
-	do
-		MYMAP[$column]=$ind
-		ind=$ind+1
-	done
 
+function uodate_row 
+{
+local re='^[0-9]+$'
+local line_num
+typeset -i line_num
+line_num=$(wc -l < $5)
+	if [[ -f $5 ]];then
+		if [[ $3 =~ $re ]] && [[ $3 -le $line_num ]];then
+			if [[ $3 -ne 1 ]];then
+				sed -i "$3 d" $5
+				sed -i "$3 d" $5.index
+				echo "row $3 deleted"
+			else
+				echo "cannot delete table header"
+			fi
+		else
+			echo "non valid number"
+		fi
+	else
+		echo "No table with this name"
+	fi
 }
 
 
+function validate_unique_primary_key
+{
+	local insert_statment=$(echo $* | awk 'BEGIN {FS = " "} { for ( i = 1;i <= NF;i++ ) { if (i = NF) print $i }  } ')
+	local temp_values=$(echo $insert_statment | awk 'BEGIN {FS = "("} {print $2}')
+	local raw_values=$(echo $temp_values | awk 'BEGIN {FS = ")"} {print $1}')
+	local values=($(echo $raw_values | awk 'BEGIN {FS=","}{for(i=1;i<=NF;i++) print $i}'))
+	local key=$(cat $4.index | awk 'BEGIN{FS=":"} {print $1}')
+	local key_column_values=$(select_column $1 $key $3 $4)
+	typeset -i p_key_index
+	local p_key_index=$(cat $4.index | awk 'BEGIN{FS=":"} {print $2}')
+	echo $key_column_values | grep ${values[$p_key_index]}
+	if [[  $? -eq 0 ]];then
+		echo "non unique"
+	else
+		echo "unique"
+	fi	
 
+}
 
+#uses global var p_key to create table_name.index 
 function set_primary_key
+{
+	local columns=($(head -1 $3 |awk 'BEGIN{FS=",";OFS=":"}{$1=$1; print $0}'| awk 'BEGIN{FS=":"}{for(i=1;i<=NF;i++) if(i%2) print $i}'))
+	declare -A MYMAP
+	local iterator
+	typeset -i iterator
+	typeset -i p_key_index
+	iterator=0
+	for column in "${columns[@]}"
+	do
+		if [[ $column == $p_key ]];then
+			p_key_index=$iterator
+		fi
+		iterator=$iterator+1
+	done
+	echo "$p_key:$p_key_index" > $3.index
+
+}
+
+function choose_primary_key
 {
 	local flag=0
 	local headers=($(get_headers $*))
@@ -38,7 +83,7 @@ function set_primary_key
 
 	if [[ flag -eq 1 ]];then
 		echo "primary_key set sucess"
-		p_key=$primary_key 
+		p_key=$primary_key  # set global var p_key to be used for .index creation
 	else
 		echo "non-valid primary_key"
 	fi
@@ -51,11 +96,24 @@ function set_primary_key
 
 function delete_row 
 {
-	if [[ $3 -ne 1 ]];then
-		sed -i "$3 d" $5
-		echo "row $3 deleted"
+local re='^[0-9]+$'
+local line_num
+typeset -i line_num
+line_num=$(wc -l < $5)
+	if [[ -f $5 ]];then
+		if [[ $3 =~ $re ]] && [[ $3 -le $line_num ]];then
+			if [[ $3 -ne 1 ]];then
+				sed -i "$3 d" $5
+				sed -i "$3 d" $5.index
+				echo "row $3 deleted"
+			else
+				echo "cannot delete table header"
+			fi
+		else
+			echo "non valid number"
+		fi
 	else
-		echo "cannot delete table header"
+		echo "No table with this name"
 	fi
 }
 function select_column {
@@ -82,9 +140,13 @@ function select_column {
 		ind_awk=$ind_awk+1
 		result="$result\$$ind_awk\"  \" "
 	done
-
-		echo -e "\n"
-	 	gawk -c -F',' "$(echo $OFS){\$1=\$1; print $(echo $result)}" $4  |column -t -s" "
+		if [[ $5 == "emod" ]];then
+			echo -e "\n"
+	 		gawk -c -F',' "$(echo $OFS){\$1=\$1; print $(echo $result)}" $4  |column -t -s" " | cat -n
+	 	else
+	 		echo -e "\n"
+	 		gawk -c -F',' "$(echo $OFS){\$1=\$1; print $(echo $result)}" $4  |column -t -s" " 
+	 fi
 	
 }
 
@@ -94,9 +156,15 @@ function select_all {
 
 		if [[ -f $4 ]];then
 			
-			echo -e "\n"
-			column -t -s "," $4
-			echo -e "\n"
+			if [[ $5 == "emod" ]];then
+				echo -e "\n"
+				column -t -s "," $4 | cat -n
+				echo -e "\n"
+			else
+				echo -e "\n"
+				column -t -s "," $4
+				echo -e "\n"
+			fi
 
 		else
 			echo No table with this name
@@ -125,12 +193,14 @@ function valid_insert_datatype {
 				flag=1;
 			else
 				flag=0;
+				break;
 			fi
 		else
 			if ! [[ $value =~ $re  ]];then
 				flag=1;
 			else
 				flag=0;
+				break;
 
 			fi
 		fi
@@ -183,6 +253,7 @@ function check_insert_syntax { #check insert synatx "insert into table table_nam
 	local values_count=$(echo ${values_array[@]})
 	local data_types=$(get_colum_datatypes $4)
 	local valid_insertion=$(valid_insert_datatype $*)
+	local unique_p_key
 
  	if [[ "$check_path" == "$main_dir" ]];then #check if databse is selected
  		echo choose db first;
@@ -195,8 +266,14 @@ function check_insert_syntax { #check insert synatx "insert into table table_nam
  				if [[ $check_num_colum -eq $values_count ]];then #check number of colums 
  					
  					if [[ $valid_insertion -eq 1 ]];then
- 						echo $raw_values >> $4;
- 						echo insert data sucess
+ 						unique_p_key=$(validate_unique_primary_key $*)
+ 						if [[ $unique_p_key == "unique" ]];then
+ 							echo $raw_values >> $4;
+ 							echo insert data sucess
+ 						else
+ 							echo "insert unique primary_key"
+
+ 						fi
  					else
  						echo incompatible data types
  					fi
@@ -352,6 +429,7 @@ function remove_table {
 	if [[ $(pwd) != $main_dir ]];then
 		if [ -f $3 ];then
 			rm $3
+			rm $3.index
 			echo -e "\033[33;31m tabel $3 removed !"
 			echo -en "\e[0m"	
 		else
@@ -381,7 +459,7 @@ function show {
 
 function show_tables {
 	if [[ $(pwd) != $main_dir ]];then
-    	ls -l $(pwd) | awk 'BEGIN{FS=" "}{if($0!="")print $9}'
+    	ls -l $(pwd) | awk 'BEGIN{FS=" "}{if($0!="")print $9}'| grep -v .index
 	else
 		echo -e "\033[33;31m Select a database first"
 		echo -e "\033[33;31m You can use show databases to list availabe databases"
@@ -436,14 +514,14 @@ function table_creator {
 			if [ ! -f  $table ]; then
 				check_two=$(check_headers_datatype $*)
 				if [[ $check_two == "valid" ]];then
-					set_primary_key $* 
+					choose_primary_key $* 
 					if [[ $? == 1 ]];then
 						$(touch $3)	
 						create=$(set_headers $* )
 						sleep .01
 						echo -e "\033[33;34m table $3 created"
 						echo -en "\e[0m"
-						echo "primary_key=>$p_key" >> $3
+						set_primary_key $*
 					else
 						echo "primary_key set failed"
 						echo "failed to create table $3"

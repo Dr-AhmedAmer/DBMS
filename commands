@@ -1,0 +1,11 @@
+create table table_name (name:data_type,name:data_type....)
+create database database_name
+show tables
+show databases
+insert into 
+remove table table_name
+insert into table table_name (value,value,...)
+select col_name,col_name from table_name [emod]
+select all from table_name [emod]
+delete row row_number from table_name
+select 
