@@ -4,28 +4,78 @@ users_file="/usr/local/bash_dbms/users_file"
 p_key=""
 
 
-# function uodate_row 
-# {
-# local re='^[0-9]+$'
-# local line_num
-# typeset -i line_num
-# line_num=$(wc -l < $5)
-# 	if [[ -f $5 ]];then
-# 		if [[ $3 =~ $re ]] && [[ $3 -le $line_num ]];then
-# 			if [[ $3 -ne 1 ]];then
-# 				sed -i "$3 d" $5
-# 				sed -i "$3 d" $5.index
-# 				echo "row $3 deleted"
-# 			else
-# 				echo "cannot delete table header"
-# 			fi
-# 		else
-# 			echo "non valid number"
-# 		fi
-# 	else
-# 		echo "No table with this name"
-# 	fi
-# }
+function updatemode
+
+{
+	local primary_key=$(cat $5.index | awk 'BEGIN{FS=":"} {print $1}')
+
+	if [[ $7 == $primary_key ]];then
+		echo cannot update primary_key
+	else	
+		local flag
+		flag=0;
+		local re='^[0-9]+$'
+		local data_types=($(get_colum_datatypes $5))
+		local new_value=$(echo $* | awk 'BEGIN{FS="= "} {print $2}')
+		local columns=($(head -1 $5 |awk 'BEGIN{FS=",";OFS=":"}{$1=$1; print $0}'| awk 'BEGIN{FS=":"}{for(i=1;i<=NF;i++) if(i%2) print $i}'))
+		declare -A MYMAP
+		typeset -i ind
+		ind=0
+		for column in "${columns[@]}"
+		do
+			MYMAP[$column]=$ind
+			ind=$ind+1
+		done
+		typeset -i column_index
+		local column_index=${MYMAP[$7]}
+		if [[ "${data_types[$column_index]}" == "int" ]];then
+			if [[ $new_value =~ $re ]];then
+				flag=1;
+			else
+				flag=0;
+			fi
+		else
+			if ! [[ $new_value =~ $re  ]];then
+				flag=1;
+			else
+				flag=0;
+
+			fi
+		fi
+	column_index+=1
+		if [[ flag -eq 1 ]];then
+			local new_tabel=$(awk -F "," 'BEGIN{OFS=","}{for(i =1 ; i <=NF ; i++) if(i == "'"$column_index"'" && NR == "'"$3"'") $i="'"$new_value"'" ;print$0}' $5)
+			echo "$new_tabel" > $5
+			echo Update sucess
+		else
+			echo non-valid
+	fi
+fi	
+	
+}
+
+
+
+function update_row 
+{
+local re='^[0-9]+$'
+local line_num
+typeset -i line_num
+line_num=$(wc -l < $5)
+	if [[ -f $5 ]];then
+		if [[ $3 =~ $re ]] && [[ $3 -le $line_num ]];then
+			if [[ $3 -ne 1 ]];then
+				updatemode $*
+			else
+				echo "cannot update table header"
+			fi
+		else
+			echo "non valid number"
+		fi
+	else
+		echo "No table with this name"
+	fi
+}
 
 
 function validate_unique_primary_key
@@ -410,6 +460,10 @@ function process_command {
 	fi
 	if [[ "$1" == "delete" ]] && [[ "$2" == "row" ]] ;then
 		delete_row $*
+	fi
+
+	if [[ "$1" == "update" ]] && [[ "$2" == "row" ]] ;then
+		update_row $*
 	fi
 
 
